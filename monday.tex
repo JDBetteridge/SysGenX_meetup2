@@ -5,6 +5,7 @@
 \usepackage{hhline}
 \usepackage{appendixnumberbeamer}
 \usepackage{forloop}
+\usepackage{makecell}
 
 % Settings for listings package
 \definecolor{mygreen}{rgb}{0,0.6,0}
@@ -241,27 +242,105 @@
 
 \title[]{Update: Firedrake on GPU + New-FL\\
 \small SysGenX Meetup}
-\author[JB,PF,DH]{\textbf{David Ham} \and Patrick Farrell \and Jack Betteridge}
+\author[JB,PF,DH]{\textbf{David Ham} \and Patrick Farrell \and Jack Betteridge \and Paul Kelly}
 \date[26/9/2022]{26${}^\text{th}$ September 2022}
 
 \begin{document}
 \maketitle
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\begin{frame}
-What have we been working on?
+\begin{frame}{Researcher and project structure}
+\centering
+
+    \begin{tabular}{|c|c|}
+         \hline SysGenX & \makecell{Software for\\Research Communities} \\\hline
+         \makecell{J. Betteridge\\\\Deployment\\Memory management\\GPUs} & \makecell{K. Sagiyama\\\\I/O\\
+         Subdomains}\\\hline
+         \makecell{TBC\\\\UFL Rewrite}& \makecell{TBC\\\\Potentially AMR}\\\hline
+    \end{tabular}
+\end{frame}
+
+\begin{frame}{Research programme}
+
 \begin{itemize}
 	\item Firedrake Spack installer
 	\item Firedrake Singularity image
 	\item Petsc4py garbage collector
-	\item Firedrake has started down the road to GPUs!
+	\item GPUs
+	\item UFL rethink.
 \end{itemize}
 
 \end{frame}
-\begin{frame}
+    
+\begin{frame}{Distributed garbage collection}
+
+\begin{itemize}
+    \item Managed languages (Python, Julia...) destroy objects essentially at random.
+    \item PETSc expects all MPI ranks to destroy objects in concert.
+\end{itemize}
+This causes unpredictable deadlocks at scale.
+\pause
+
+Solution:
+\begin{itemize}
+    \item Intercept destructor in managed language.
+    \item Objects to be destroyed are notified to PETSc as cleared for destruction.
+    \item PETSc periodically conducts a collective set intersection and actually destroys those objects all ranks agree on.
+\end{itemize}
+Code exists, merge to PETSc main is pending.
 
 \end{frame}
 
+\begin{frame}{Firedrake on GPUs}
+    Targetting transparent offload of operations to GPU. Three key operations:
+    
+\begin{itemize}
+    \item 1-Form assembly - WIP with UIUC.
+    \item Solvers/preconditioners - via PETSc
+    \item Matrix assembly - TBC.
+\end{itemize}
+    
+\end{frame}
 
+\begin{frame}[fragile]{GPU programming model}
+\begin{lstlisting}[language={[firedrake]python},linebackgroundcolor={\btLstHL{15,16,22,23}}]
+mesh = UnitSquareMesh(32, 32)
+V = FunctionSpace(mesh, "CG", 1)
+u = TrialFunction(V)
+v = TestFunction(V)
+x, y = SpatialCoordinate(mesh)
+
+a = (inner(grad(u), grad(v)) + inner(u, v)) * dx
+f = Function(V)
+f.interpolate((1+8*pi*pi)*cos(x*pi*2)*cos(y*pi*2))
+L = inner(f, v) * dx
+fem_soln = Function(V)
+sp = {"mat_type": "matfree",
+      "ksp_monitor_true_residual": None,
+      "ksp_converged_reason": None}
+with offloading():
+    solve(a == L, fem_soln, solver_parameters=sp)
+
+f.interpolate(cos(x*pi*2)*cos(y*pi*2))
+
+assert norm(fem_soln-f) < 1e-2
+
+with offloading():
+    assert norm(fem_soln-f) < 1e-2
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}{UFL Rethink}
+At least:
+\begin{enumerate}
+    \item Extensibility.
+    \item Closure (we don't "fall out" of UFL).
+    \item Scope: integral operators, interpolation, \ldots
+    \item Design mistakes: e.g. how to represent finite elements.
+    \item Extensions to support AMR, P-refinement\ldots 
+    \item Performance at some points.
+\end{enumerate}
+Discussion starts tomorrow.
+\end{frame}
 
 \end{document}

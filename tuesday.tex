@@ -332,9 +332,9 @@ In conversation with EPCC/ARCHER2 support:
 \begin{column}[T]{0.49\textwidth}
     Target the GPU as an offload device:
     \begin{itemize}
-	\item Use OpenCL framework
-	\item CUDA in the future?
-	\item Use a context manager to control offloading
+	\item Use OpenCL framework (CUDA future?)
+	\item Use a context manager to control offloading:\\
+	One form assembly(+matfree)/\\Solvers/\\(Matrix assembly)
     \end{itemize}
     
     Follow dependencies:
@@ -343,8 +343,8 @@ In conversation with EPCC/ARCHER2 support:
 	\item PETSc
     \end{itemize}
     
-    Follow hardware:\\
-    Not all GPUs are NVidia!
+    \hspace{3em} Follow the hardware:\\
+    \hspace{4em} Not all GPUs are NVidia!
 \end{column}
 \begin{column}[T]{0.49\textwidth}
     \begin{figure}
@@ -394,7 +394,7 @@ with offloading():
     Slightly more than vapourware:
     \begin{itemize}
 	\item Firedrake branch with functionality
-	\item Currently only tested for CPU
+	\item Currently only tested for CPU \emph{on CI}
 	\item Raises questions about robust CI
     \end{itemize}
     
